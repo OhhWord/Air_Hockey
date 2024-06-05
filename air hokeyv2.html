@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Air Hockey Game</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background-color: #f0f0f0;
+    }
+
+    .container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: #00aaff;
+      border: 10px solid #ffffff;
+      box-sizing: border-box;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .background-circle {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+    }
+
+    .paddle {
+      position: absolute;
+      background-color: blue;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+    }
+
+    #leftPaddle {
+      left: 30px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    #rightPaddle {
+      right: 30px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .ball {
+      position: absolute;
+      background-color: red;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .goal {
+      position: absolute;
+      width: 30px;
+      height: 250px;
+      background-color: #ffffff;
+    }
+
+    #leftGoal {
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    #rightGoal {
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .reset-button {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .scoreboard {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 24px;
+      color: white;
+    }
+
+    .goal-message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      display: none;
+    }
+
+    .mode-selection {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    .mode-button {
+      padding: 10px 20px;
+      margin: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="background-circle"></div>
+    <div class="goal" id="leftGoal"></div>
+    <div class="goal" id="rightGoal"></div>
+    <div class="paddle" id="leftPaddle"></div>
+    <div class="paddle" id="rightPaddle"></div>
+    <div class="ball" id="ball"></div>
+    <div class="scoreboard" id="scoreboard">Left Player: 0 - Right Player: 0</div>
+    <button class="reset-button" onclick="resetGame()">Reset</button>
+    <div class="goal-message" id="goalMessage"></div>
+    <div class="mode-selection" id="modeSelection">
+      <button class="mode-button" onclick="startGame('player')">Play Against Player</button>
+      <button class="mode-button" onclick="startGame('ai')">Play Against AI</button>
+    </div>
+  </div>
+  <script>
+    const paddleSpeed = 15;
+    const ballSpeed = 7;
+    let ballX, ballY, ballXSpeed, ballYSpeed, leftPaddleY, rightPaddleY;
+    let leftPlayerScore = 0;
+    let rightPlayerScore = 0;
+    const keysPressed = {};
+    let interval;
+    let mode = 'player';
+
+    function randomDirection() {
+      const angle = Math.random() * Math.PI * 2;
+      ballXSpeed = ballSpeed * Math.cos(angle);
+      ballYSpeed = ballSpeed * Math.sin(angle);
+    }
+
+    function initGame() {
+      ballX = window.innerWidth / 2 - 20; // Adjusted for larger ball size
+      ballY = window.innerHeight / 2 - 20; // Adjusted for larger ball size
+      randomDirection();
+      leftPaddleY = window.innerHeight / 2 - 30; // Adjusted for paddle size
+      rightPaddleY = window.innerHeight / 2 - 30; // Adjusted for paddle size
+
+      const ball = document.getElementById('ball');
+      ball.style.left = ballX + 'px';
+      ball.style.top = ballY + 'px';
+
+      const leftPaddle = document.getElementById('leftPaddle');
+      leftPaddle.style.top = leftPaddleY + 'px';
+
+      const rightPaddle = document.getElementById('rightPaddle');
+      rightPaddle.style.top = rightPaddleY + 'px';
+    }
+
+    function resetGame() {
+      clearInterval(interval);
+      initGame();
+      interval = setInterval(update, 20);
+    }
+
+    function updateScoreboard() {
+      const scoreboard = document.getElementById('scoreboard');
+      scoreboard.textContent = `Left Player: ${leftPlayerScore} - Right Player: ${rightPlayerScore}`;
+    }
+
+    function showGoalMessage(player) {
+      const goalMessage = document.getElementById('goalMessage');
+      goalMessage.textContent = `${player} Player Scored!`;
+      goalMessage.style.display = 'block';
+      setTimeout(() => {
+        goalMessage.style.display = 'none';
+        resetGame();
+      }, 2000);
+    }
+
+    document.addEventListener('keydown', (event) => {
+      keysPressed[event.key] = true;
+    });
+
+    document.addEventListener('keyup', (event) => {
+      keysPressed[event.key] = false;
+    });
+
+    function update() {
+      const ball = document.getElementById('ball');
+      const leftPaddle = document.getElementById('leftPaddle');
+      const rightPaddle = document.getElementById('rightPaddle');
+      const leftGoal = document.getElementById('leftGoal');
+      const rightGoal = document.getElementById('rightGoal');
+
+      if (keysPressed['w'] && leftPaddleY > 0) {
+        leftPaddleY -= paddleSpeed;
+      }
+      if (keysPressed['s'] && leftPaddleY < window.innerHeight - 60) { // Adjusted for larger paddle size
+        leftPaddleY += paddleSpeed;
+      }
+
+      if (mode === 'player') {
+        if (keysPressed['ArrowUp'] && rightPaddleY > 0) {
+          rightPaddleY -= paddleSpeed;
+        }
+        if (keysPressed['ArrowDown'] && rightPaddleY < window.innerHeight - 60) { // Adjusted for larger paddle size
+          rightPaddleY += paddleSpeed;
+        }
+      } else if (mode === 'ai') {
+        // Random movement for AI
+        const randomNumber = Math.random();
+        if (randomNumber < 0.2) {
+          if (ballY < rightPaddleY + 30 && rightPaddleY > 0) {
+            rightPaddleY -= paddleSpeed;
+          }
+        } else if (randomNumber < 0.4) {
+          if (ballY > rightPaddleY + 30 && rightPaddleY < window.innerHeight - 60) {
+            rightPaddleY += paddleSpeed;
+          }
+        }
+      }
+
+      ballX += ballXSpeed;
+      ballY += ballYSpeed;
+
+      ball.style.left = ballX + 'px';
+      ball.style.top = ballY + 'px';
+
+      leftPaddle.style.top = leftPaddleY + 'px';
+      rightPaddle.style.top = rightPaddleY + 'px';
+
+      const ballRect = ball.getBoundingClientRect();
+      const leftPaddleRect = leftPaddle.getBoundingClientRect();
+      const rightPaddleRect = rightPaddle.getBoundingClientRect();
+      const containerRect = document.querySelector('.container').getBoundingClientRect();
+      const leftGoalRect = leftGoal.getBoundingClientRect();
+      const rightGoalRect = rightGoal.getBoundingClientRect();
+
+      // Check for paddle collision
+      if (
+        ballRect.left <= leftPaddleRect.right &&
+        ballRect.right >= leftPaddleRect.left &&
+        ballRect.top <= leftPaddleRect.bottom &&
+        ballRect.bottom >= leftPaddleRect.top
+      ) {
+        ballXSpeed = Math.abs(ballXSpeed);
+      } else if (
+        ballRect.right >= rightPaddleRect.left &&
+        ballRect.left <= rightPaddleRect.right &&
+        ballRect.top <= rightPaddleRect.bottom &&
+        ballRect.bottom >= rightPaddleRect.top
+      ) {
+        ballXSpeed = -Math.abs(ballXSpeed);
+      }
+
+      // Check for wall collision
+      if (ballRect.top <= containerRect.top || ballRect.bottom >= containerRect.bottom) {
+        ballYSpeed = -ballYSpeed;
+      }
+
+      // Check for goal
+      if (ballRect.left <= leftGoalRect.right && ballRect.top >= leftGoalRect.top && ballRect.bottom <= leftGoalRect.bottom) {
+        rightPlayerScore++;
+        updateScoreboard();
+        showGoalMessage('Right');
+      } else if (ballRect.right >= rightGoalRect.left && ballRect.top >= rightGoalRect.top && ballRect.bottom <= rightGoalRect.bottom) {
+        leftPlayerScore++;
+        updateScoreboard();
+        showGoalMessage('Left');
+      }
+
+      // Bounce off the sides but not the goals
+      if (ballRect.left <= containerRect.left && (ballRect.top < leftGoalRect.top || ballRect.bottom > leftGoalRect.bottom)) {
+        ballXSpeed = Math.abs(ballXSpeed);
+      } else if (ballRect.right >= containerRect.right && (ballRect.top < rightGoalRect.top || ballRect.bottom > rightGoalRect.bottom)) {
+        ballXSpeed = -Math.abs(ballXSpeed);
+      }
+    }
+
+    function startGame(selectedMode) {
+      mode = selectedMode;
+      document.getElementById('modeSelection').style.display = 'none';
+      initGame();
+      interval = setInterval(update, 20);
+    }
+
+    // Show mode selection screen at the start
+    window.onload = function() {
+      document.getElementById('modeSelection').style.display = 'block';
+    };
+  </script>
+</body>
+</html>
